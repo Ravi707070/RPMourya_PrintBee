@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
-const API = "http://localhost:5000"; // must match your backend
+const API = "https://rpmourya-printbee.onrender.com";
+
 
 function getAdminPwd() {
   return sessionStorage.getItem("adminPwd") || "";

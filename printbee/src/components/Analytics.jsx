@@ -23,7 +23,7 @@ ChartJS.register(
   Legend
 );
 
-const ORDERS_API = "http://localhost:5000/admin/orders";
+const ORDERS_API = "https://rpmourya-printbee.onrender.com/admin/orders";
 
 function getAdminPwd() {
   return sessionStorage.getItem("adminPwd") || "";

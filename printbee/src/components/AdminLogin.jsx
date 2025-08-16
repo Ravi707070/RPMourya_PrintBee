@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "http://localhost:5000"; // Your backend URL
+const API = "https://rpmourya-printbee.onrender.com";
 
+ // must match your backend
 export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

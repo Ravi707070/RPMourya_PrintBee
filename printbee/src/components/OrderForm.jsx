@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import mourya from "../assets/mourya_qrcode.jpeg"
 
-const API = "http://localhost:5000/order";
+const API = "https://rpmourya-printbee.onrender.com";
+
 
 export default function OrderForm() {
   const [form, setForm] = useState({
