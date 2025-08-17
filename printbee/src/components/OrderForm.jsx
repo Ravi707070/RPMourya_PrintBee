@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import mourya from "../assets/mourya_qrcode.jpeg"
 
-const API = "https://rpmourya-printbee.onrender.com";
+const API = "https://rpmourya-printbee.onrender.com/";
 
 
 export default function OrderForm() {
