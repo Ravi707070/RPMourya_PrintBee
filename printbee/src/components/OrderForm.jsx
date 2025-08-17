@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import mourya_qrcode from "../assets/mourya_qrcode.jpeg"
+import mourya_qrcode from "../assets/mourya_qrcode.jpeg";
 
 const API = "https://rpmourya-printbee.onrender.com/order";
 
@@ -15,14 +15,15 @@ export default function OrderForm() {
     price: "",
     fileLink: "",
   });
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]); // store multiple files
   const [status, setStatus] = useState({ loading: false, msg: "" });
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
   const onFile = (e) => {
-    const f = e.target.files[0];
-    setFile(f);
-    if (f) setForm({ ...form, fileLink: "" });
+    const selected = Array.from(e.target.files);
+    setFiles(selected);
+    if (selected.length > 0) setForm({ ...form, fileLink: "" });
   };
 
   function toBase64(file) {
@@ -41,7 +42,7 @@ export default function OrderForm() {
 
   const getUpiLink = () => {
     const upiId = payments.UPI.value;
-    const payeeName = "PrintShop"; // Change to your shop name
+    const payeeName = "PrintShop";
     const note = "Print Order";
     const amount = form.price || "";
     return `upi://pay?pa=${upiId}&pn=${payeeName}&tn=${note}&am=${amount}&cu=INR`;
@@ -63,17 +64,20 @@ export default function OrderForm() {
       return;
     }
 
-    if (!file && !form.fileLink) {
-      setStatus({ loading: false, msg: "Attach file or provide link." });
+    if (files.length === 0 && !form.fileLink) {
+      setStatus({ loading: false, msg: "Attach file(s) or provide link." });
       return;
     }
 
-    if (file && file.size > 100 * 1024 * 1024) {
-      setStatus({
-        loading: false,
-        msg: "File >100MB: please provide external link.",
-      });
-      return;
+    // check size limit
+    for (let f of files) {
+      if (f.size > 100 * 1024 * 1024) {
+        setStatus({
+          loading: false,
+          msg: `File ${f.name} >100MB: please provide external link.`,
+        });
+        return;
+      }
     }
 
     try {
@@ -88,11 +92,16 @@ export default function OrderForm() {
         price: form.price || "",
       };
 
-      if (file) {
-        const base64 = await toBase64(file);
-        payload.fileBase64 = base64;
-        payload.fileName = file.name;
-        payload.fileMimeType = file.type;
+      if (files.length > 0) {
+        payload.files = [];
+        for (const f of files) {
+          const base64 = await toBase64(f);
+          payload.files.push({
+            fileBase64: base64,
+            fileName: f.name,
+            fileMimeType: f.type,
+          });
+        }
       } else {
         payload.fileLink = form.fileLink;
       }
@@ -126,12 +135,13 @@ export default function OrderForm() {
           price: "",
           fileLink: "",
         });
-        setFile(null);
-      } else
+        setFiles([]);
+      } else {
         setStatus({
           loading: false,
           msg: "❌ Error: " + (data.error || "unknown"),
         });
+      }
     } catch (err) {
       console.error(err);
       setStatus({ loading: false, msg: "⚠️ Submission failed." });
@@ -204,7 +214,7 @@ export default function OrderForm() {
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
           <label className="block w-full md:w-auto">
             <div className="text-sm font-medium text-gray-600 mb-1">
-              Attach File (≤100MB)
+              Attach Files (≤100MB each)
             </div>
             <input
               type="file"
