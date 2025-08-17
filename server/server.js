@@ -9,7 +9,7 @@ require("dotenv").config();
 
 const app = express();
 const PORT = 5000;
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzh1Ql8BNzP78-FAnRad2eVo8BcXr_q3iDZ3TbCqCHLXkmd5VeiMBv2_Vfe-YVuf7v0/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbz2O9ARZWj-6Tsho8BPWe1ypTyxzqlNouuzn700QVJTzXIUn5gkrcY2kmL_LEoevbv2/exec";
 
 // Middleware
 app.use(

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 
 const API = "https://rpmourya-printbee.onrender.com";
 
-
 function getAdminPwd() {
   return sessionStorage.getItem("adminPwd") || "";
 }
@@ -46,7 +45,6 @@ export default function Dashboard() {
 
       // Place new orders on top
       setOrders(Array.isArray(data.orders) ? data.orders.reverse() : []);
-
     } catch (err) {
       console.error("Error loading dashboard:", err);
       setOrders([]);
@@ -59,10 +57,18 @@ export default function Dashboard() {
     load();
   }, []);
 
-  // Download file
-  function downloadOrderFile(order) {
-    if (!order.fileUrl) return alert("No file available for this order.");
-    window.open(order.fileUrl, "_blank");
+  // Download file(s)
+  function downloadOrderFiles(order) {
+    if (Array.isArray(order.files) && order.files.length > 0) {
+      order.files.forEach((fileUrl) => {
+        window.open(fileUrl, "_blank");
+      });
+    } else if (order.fileUrl) {
+      // fallback for older orders with single file
+      window.open(order.fileUrl, "_blank");
+    } else {
+      alert("No file available for this order.");
+    }
   }
 
   // Update price
@@ -92,7 +98,7 @@ export default function Dashboard() {
       return alert("Job status must be Pending, In Progress, or Finished");
     }
 
-    setSavingOrderIds(prev => [...prev, order.orderId]);
+    setSavingOrderIds((prev) => [...prev, order.orderId]);
 
     try {
       const res = await fetch(`${API}/admin/update-order`, {
@@ -121,10 +127,9 @@ export default function Dashboard() {
       console.error("Error updating order:", err);
       alert("Failed to update order");
     } finally {
-      setSavingOrderIds(prev => prev.filter(id => id !== order.orderId));
+      setSavingOrderIds((prev) => prev.filter((id) => id !== order.orderId));
     }
   }
-
 
   // Create new order
   async function handleCustomOrder(e) {
@@ -144,7 +149,7 @@ export default function Dashboard() {
       const data = await res.json();
       if (data.success) {
         // Prepend new order to dashboard
-        setOrders(prev => [
+        setOrders((prev) => [
           { ...newOrder, orderId: data.orderId, jobStatus: "Pending" },
           ...prev,
         ]);
@@ -169,7 +174,6 @@ export default function Dashboard() {
       alert("Failed to create order");
     }
   }
-
 
   if (loading) return <p className="p-4">Loading...</p>;
 
@@ -212,6 +216,7 @@ export default function Dashboard() {
                   <th className="p-2 border text-left">Phone</th>
                   <th className="p-2 border text-left">Pickup Time</th>
                   <th className="p-2 border text-left">Description</th>
+                  <th className="p-2 border text-left">Files</th>
                   <th className="p-2 border text-right">Price</th>
                   <th className="p-2 border text-left">Status</th>
                   <th className="p-2 border text-left">Payment</th>
@@ -226,6 +231,36 @@ export default function Dashboard() {
                     <td className="border p-2">{order.phone}</td>
                     <td className="border p-2">{order.pickupTime}</td>
                     <td className="border p-2">{order.description}</td>
+
+                    <td className="border p-2">
+                      {Array.isArray(order.files) && order.files.length > 0 ? (
+                        <ul className="list-disc list-inside">
+                          {order.files.map((file, idx) => (
+                            <li key={idx}>
+                              <a
+                                href={file}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 underline"
+                              >
+                                File {idx + 1}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : order.fileUrl ? (
+                        <a
+                          href={order.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 underline"
+                        >
+                          Download File
+                        </a>
+                      ) : (
+                        "No files"
+                      )}
+                    </td>
 
                     <td className="border p-2 text-right">
                       <input
@@ -253,7 +288,7 @@ export default function Dashboard() {
                     <td className="border p-2 text-center space-x-2">
                       <button
                         className="px-3 py-1 bg-blue-600 text-white rounded"
-                        onClick={() => downloadOrderFile(order)}
+                        onClick={() => downloadOrderFiles(order)}
                       >
                         Download
                       </button>
@@ -262,7 +297,9 @@ export default function Dashboard() {
                         onClick={() => saveOrderChanges(order)}
                         disabled={savingOrderIds.includes(order.orderId)}
                       >
-                        {savingOrderIds.includes(order.orderId) ? "Saving..." : "Save"}
+                        {savingOrderIds.includes(order.orderId)
+                          ? "Saving..."
+                          : "Save"}
                       </button>
                     </td>
                   </tr>
@@ -307,7 +344,9 @@ export default function Dashboard() {
           <input
             type="datetime-local"
             value={newOrder.pickupTime}
-            onChange={(e) => setNewOrder({ ...newOrder, pickupTime: e.target.value })}
+            onChange={(e) =>
+              setNewOrder({ ...newOrder, pickupTime: e.target.value })
+            }
             className="p-2 border rounded"
             required
           />
@@ -315,20 +354,26 @@ export default function Dashboard() {
             type="text"
             placeholder="Description"
             value={newOrder.description}
-            onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
+            onChange={(e) =>
+              setNewOrder({ ...newOrder, description: e.target.value })
+            }
             className="p-2 border rounded"
           />
           <input
             type="number"
             placeholder="Price"
             value={newOrder.price}
-            onChange={(e) => setNewOrder({ ...newOrder, price: e.target.value })}
+            onChange={(e) =>
+              setNewOrder({ ...newOrder, price: e.target.value })
+            }
             className="p-2 border rounded"
             required
           />
           <select
             value={newOrder.paymentMethod}
-            onChange={(e) => setNewOrder({ ...newOrder, paymentMethod: e.target.value })}
+            onChange={(e) =>
+              setNewOrder({ ...newOrder, paymentMethod: e.target.value })
+            }
             className="p-2 border rounded"
             required
           >
