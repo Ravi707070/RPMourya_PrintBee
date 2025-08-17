@@ -141,7 +141,6 @@ app.post("/admin/update-order", checkAdmin, async (req, res) => {
   try {
     const { orderId, jobStatus, price } = req.body;
 
-    // Forward to GAS with action included
     const response = await fetch(GAS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -161,14 +160,50 @@ app.post("/admin/update-order", checkAdmin, async (req, res) => {
   }
 });
 
-
-
 /* =======================
    Test Route
 ======================= */
 app.get("/data", (req, res) => {
   res.json({ message: "Hello, World!" });
 });
+
+/* =======================
+   Continuous Render Task
+   Runs 7 AM - 12 AM (midnight)
+======================= */
+async function renderTask() {
+  try {
+    // Replace this with your actual render logic
+    const res = await fetch(`${GAS_URL}?action=renderTask`);
+    const data = await res.json();
+    console.log("Render task executed at", new Date(), data);
+  } catch (err) {
+    console.error("Render task error:", err);
+  }
+}
+
+function startRenderLoop() {
+  async function loop() {
+    const now = new Date();
+    const hour = now.getHours();
+
+    if (hour >= 7 && hour < 24) { // 7 AM to 12 AM
+      await renderTask();
+      setImmediate(loop); // Run immediately again
+    } else {
+      console.log("Outside render hours. Waiting until 7 AM...");
+      const nextStart = new Date();
+      nextStart.setHours(7, 0, 0, 0);
+      if (hour >= 24) nextStart.setDate(now.getDate() + 1);
+      const delay = nextStart - now;
+      setTimeout(startRenderLoop, delay);
+    }
+  }
+
+  loop();
+}
+
+startRenderLoop();
 
 /* =======================
    Start Server
