@@ -5,6 +5,7 @@ import AdminLogin from "./components/AdminLogin";
 import Dashboard from "./components/Dashboard";
 import Analytics from "./components/Analytics";
 import OrderForm from "./components/OrderForm";
+import HeroSection from "./components/HeroSection";
 
 function AdminRoute({ children }) {
   const adminPwd = sessionStorage.getItem("adminPwd");
@@ -14,7 +15,8 @@ function AdminRoute({ children }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<OrderForm />} />
+      <Route path="/" element={<HeroSection />} />
+      <Route path="/order" element={<OrderForm />} />
       <Route path="/admin" element={<AdminLogin />} />
       <Route path="/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
       <Route path="/analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
