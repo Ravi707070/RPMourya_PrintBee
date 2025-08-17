@@ -188,42 +188,24 @@ app.get("/render-status", (req, res) => {
 });
 
 /* =======================
-   Continuous Memory-Safe Render Task
-   Runs 7 AM - 12 AM (midnight)
+   Admin Trigger Render Task
 ======================= */
-async function renderTask() {
+app.post("/admin/run-render", checkAdmin, async (req, res) => {
   try {
-    const res = await fetch(`${GAS_URL}?action=renderTask`);
-    const data = await res.json();
-    console.log("Render task executed at", new Date());
-    // Do not store `data` globally to keep memory usage low
-  } catch (err) {
-    console.error("Render task error:", err);
-  }
-}
+    const response = await fetch(`${GAS_URL}?action=renderTask`);
+    const data = await response.json();
+    res.json({ success: true, message: "Render task executed", data });
 
-function startRenderLoop() {
-  async function loop() {
-    const now = new Date();
-    const hour = now.getHours();
-
-    if (hour >= 7 && hour < 24) { // 7 AM to 12 AM
-      await renderTask();
-      setTimeout(loop, 500); // memory-safe delay
-    } else {
-      console.log("Outside render hours. Waiting until 7 AM...");
-      const nextStart = new Date();
-      nextStart.setHours(7, 0, 0, 0);
-      if (hour >= 24) nextStart.setDate(now.getDate() + 1);
-      const delay = nextStart - now;
-      setTimeout(startRenderLoop, delay);
+    // Optional: manual garbage collection
+    if (global.gc) {
+      global.gc();
+      console.log("Manual garbage collection executed after render task.");
     }
+  } catch (err) {
+    console.error("Manual render task error:", err);
+    res.status(500).json({ success: false, error: "Failed to execute render task" });
   }
-
-  loop();
-}
-
-startRenderLoop();
+});
 
 /* =======================
    Optional Memory Logger
