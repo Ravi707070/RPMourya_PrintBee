@@ -26,6 +26,10 @@ export default function Dashboard() {
     price: "",
   });
 
+  // Search & filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+
   // Load stats + orders
   async function load() {
     setLoading(true);
@@ -43,7 +47,6 @@ export default function Dashboard() {
         todayRevenue: Number(data.stats?.todayRevenue || 0),
       });
 
-      // Place new orders on top
       setOrders(Array.isArray(data.orders) ? data.orders.reverse() : []);
     } catch (err) {
       console.error("Error loading dashboard:", err);
@@ -57,15 +60,31 @@ export default function Dashboard() {
     load();
   }, []);
 
+  // Filtered orders
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "All" || order.jobStatus === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
   // Download file(s)
   function downloadOrderFiles(order) {
+    let files = [];
+
     if (Array.isArray(order.files) && order.files.length > 0) {
-      order.files.forEach((fileUrl) => {
-        window.open(fileUrl, "_blank");
-      });
+      files = order.files;
     } else if (order.fileUrl) {
-      // fallback for older orders with single file
-      window.open(order.fileUrl, "_blank");
+      files = order.fileUrl.split(",").map((f) => f.trim());
+    }
+
+    if (files.length > 0) {
+      files.forEach((fileUrl) => window.open(fileUrl, "_blank"));
     } else {
       alert("No file available for this order.");
     }
@@ -118,7 +137,6 @@ export default function Dashboard() {
 
       if (data.success) {
         alert("Order updated successfully!");
-        // Reload orders, newest first
         await load();
       } else {
         alert("Failed to update order: " + (data.error || "Unknown error"));
@@ -148,13 +166,11 @@ export default function Dashboard() {
 
       const data = await res.json();
       if (data.success) {
-        // Prepend new order to dashboard
         setOrders((prev) => [
           { ...newOrder, orderId: data.orderId, jobStatus: "Pending" },
           ...prev,
         ]);
 
-        // Reset form
         setNewOrder({
           name: "",
           email: "",
@@ -179,131 +195,159 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-4">📊 Admin Dashboard</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-blue-100 rounded-lg">
-          <h2 className="font-semibold">Total Orders</h2>
-          <p className="text-xl">{stats.totalOrders}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="p-4 bg-blue-100 rounded-lg shadow">
+          <h2 className="font-semibold text-gray-700">Total Orders</h2>
+          <p className="text-2xl font-bold">{stats.totalOrders}</p>
         </div>
-        <div className="p-4 bg-green-100 rounded-lg">
-          <h2 className="font-semibold">Today Orders</h2>
-          <p className="text-xl">{stats.todayOrders}</p>
+        <div className="p-4 bg-green-100 rounded-lg shadow">
+          <h2 className="font-semibold text-gray-700">Today Orders</h2>
+          <p className="text-2xl font-bold">{stats.todayOrders}</p>
         </div>
-        <div className="p-4 bg-yellow-100 rounded-lg">
-          <h2 className="font-semibold">Total Revenue</h2>
-          <p className="text-xl">₹{stats.totalRevenue}</p>
+        <div className="p-4 bg-yellow-100 rounded-lg shadow">
+          <h2 className="font-semibold text-gray-700">Total Revenue</h2>
+          <p className="text-2xl font-bold">₹{stats.totalRevenue}</p>
         </div>
-        <div className="p-4 bg-purple-100 rounded-lg">
-          <h2 className="font-semibold">Today Revenue</h2>
-          <p className="text-xl">₹{stats.todayRevenue}</p>
+        <div className="p-4 bg-purple-100 rounded-lg shadow">
+          <h2 className="font-semibold text-gray-700">Today Revenue</h2>
+          <p className="text-2xl font-bold">₹{stats.todayRevenue}</p>
         </div>
       </div>
 
+      {/* Search + Filter Controls */}
+      <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-3 md:space-y-0">
+        <input
+          type="text"
+          placeholder="Search by name, email, or phone"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="p-2 border rounded w-full md:w-1/3"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="p-2 border rounded w-full md:w-1/4"
+        >
+          <option value="All">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Finished">Finished</option>
+        </select>
+      </div>
+
       {/* Orders Table */}
-      <div>
-        <h2 className="text-xl font-bold mb-2">All Orders</h2>
-        {orders.length === 0 ? (
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h2 className="text-xl font-bold mb-4">📦 All Orders</h2>
+        {filteredOrders.length === 0 ? (
           <p>No orders found</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-gray-200">
-                  <th className="p-2 border text-left">Name</th>
-                  <th className="p-2 border text-left">Email</th>
-                  <th className="p-2 border text-left">Phone</th>
-                  <th className="p-2 border text-left">Pickup Time</th>
-                  <th className="p-2 border text-left">Description</th>
-                  <th className="p-2 border text-left">Files</th>
-                  <th className="p-2 border text-right">Price</th>
-                  <th className="p-2 border text-left">Status</th>
-                  <th className="p-2 border text-left">Payment</th>
-                  <th className="p-2 border text-center">Actions</th>
+                <tr className="bg-gray-200 text-gray-800">
+                  <th className="p-3 border text-left">Name</th>
+                  <th className="p-3 border text-left">Email</th>
+                  <th className="p-3 border text-left">Phone</th>
+                  <th className="p-3 border text-left">Pickup Time</th>
+                  <th className="p-3 border text-left">Description</th>
+                  <th className="p-3 border text-left">Files</th>
+                  <th className="p-3 border text-right">Price</th>
+                  <th className="p-3 border text-left">Status</th>
+                  <th className="p-3 border text-left">Payment</th>
+                  <th className="p-3 border text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order, i) => (
-                  <tr key={order.orderId || i} className="hover:bg-gray-50">
-                    <td className="border p-2">{order.name}</td>
-                    <td className="border p-2">{order.email}</td>
-                    <td className="border p-2">{order.phone}</td>
-                    <td className="border p-2">{order.pickupTime}</td>
-                    <td className="border p-2">{order.description}</td>
+                {filteredOrders.map((order, i) => {
+                  let files = [];
+                  if (Array.isArray(order.files) && order.files.length > 0) {
+                    files = order.files;
+                  } else if (order.fileUrl) {
+                    files = order.fileUrl.split(",").map((f) => f.trim());
+                  }
 
-                    <td className="border p-2">
-                      {Array.isArray(order.files) && order.files.length > 0 ? (
-                        <ul className="list-disc list-inside">
-                          {order.files.map((file, idx) => (
-                            <li key={idx}>
-                              <a
-                                href={file}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 underline"
-                              >
-                                File {idx + 1}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : order.fileUrl ? (
-                        <a
-                          href={order.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 underline"
+                  return (
+                    <tr
+                      key={order.orderId || i}
+                      className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
+                    >
+                      <td className="border p-2">{order.name}</td>
+                      <td className="border p-2">{order.email}</td>
+                      <td className="border p-2">{order.phone}</td>
+                      <td className="border p-2">{order.pickupTime}</td>
+                      <td className="border p-2">{order.description}</td>
+
+                      <td className="border p-2">
+                        {files.length > 0 ? (
+                          <ul className="list-disc list-inside space-y-1">
+                            {files.map((file, idx) => (
+                              <li key={idx}>
+                                <a
+                                  href={file}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 underline"
+                                >
+                                  File {idx + 1}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "No files"
+                        )}
+                      </td>
+
+                      <td className="border p-2 text-right">
+                        <input
+                          type="number"
+                          value={order.price || 0}
+                          onChange={(e) =>
+                            handlePriceChange(i, e.target.value)
+                          }
+                          className="w-20 border rounded p-1 text-right"
+                        />
+                      </td>
+
+                      <td className="border p-2">
+                        <select
+                          value={order.jobStatus || "Pending"}
+                          onChange={(e) =>
+                            handleStatusChange(i, e.target.value)
+                          }
+                          className="p-1 border rounded"
                         >
-                          Download File
-                        </a>
-                      ) : (
-                        "No files"
-                      )}
-                    </td>
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Finished">Finished</option>
+                        </select>
+                      </td>
 
-                    <td className="border p-2 text-right">
-                      <input
-                        type="number"
-                        value={order.price || 0}
-                        onChange={(e) => handlePriceChange(i, e.target.value)}
-                        className="w-20 border rounded p-1 text-right"
-                      />
-                    </td>
+                      <td className="border p-2">{order.paymentMethod}</td>
 
-                    <td className="border p-2">
-                      <select
-                        value={order.jobStatus || "Pending"}
-                        onChange={(e) => handleStatusChange(i, e.target.value)}
-                        className="p-1 border rounded"
-                      >
-                        <option value="Pending">Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Finished">Finished</option>
-                      </select>
-                    </td>
-
-                    <td className="border p-2">{order.paymentMethod}</td>
-
-                    <td className="border p-2 text-center space-x-2">
-                      <button
-                        className="px-3 py-1 bg-blue-600 text-white rounded"
-                        onClick={() => downloadOrderFiles(order)}
-                      >
-                        Download
-                      </button>
-                      <button
-                        className="px-3 py-1 bg-green-600 text-white rounded"
-                        onClick={() => saveOrderChanges(order)}
-                        disabled={savingOrderIds.includes(order.orderId)}
-                      >
-                        {savingOrderIds.includes(order.orderId)
-                          ? "Saving..."
-                          : "Save"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="border p-2 text-center space-x-2">
+                        <button
+                          className="px-3 py-1 bg-blue-600 text-white rounded"
+                          onClick={() => downloadOrderFiles(order)}
+                        >
+                          Download
+                        </button>
+                        <button
+                          className="px-3 py-1 bg-green-600 text-white rounded"
+                          onClick={() => saveOrderChanges(order)}
+                          disabled={savingOrderIds.includes(order.orderId)}
+                        >
+                          {savingOrderIds.includes(order.orderId)
+                            ? "Saving..."
+                            : "Save"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -311,8 +355,8 @@ export default function Dashboard() {
       </div>
 
       {/* Custom Order Form */}
-      <div className="mt-6">
-        <h2 className="text-xl font-bold mb-2">Create Custom Order</h2>
+      <div className="bg-white p-4 rounded-lg shadow mt-6">
+        <h2 className="text-xl font-bold mb-2">➕ Create Custom Order</h2>
         <form
           onSubmit={handleCustomOrder}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
@@ -329,7 +373,9 @@ export default function Dashboard() {
             type="email"
             placeholder="Email"
             value={newOrder.email}
-            onChange={(e) => setNewOrder({ ...newOrder, email: e.target.value })}
+            onChange={(e) =>
+              setNewOrder({ ...newOrder, email: e.target.value })
+            }
             className="p-2 border rounded"
             required
           />
@@ -337,7 +383,9 @@ export default function Dashboard() {
             type="text"
             placeholder="Phone"
             value={newOrder.phone}
-            onChange={(e) => setNewOrder({ ...newOrder, phone: e.target.value })}
+            onChange={(e) =>
+              setNewOrder({ ...newOrder, phone: e.target.value })
+            }
             className="p-2 border rounded"
             required
           />
