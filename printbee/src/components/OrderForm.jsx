@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import mourya from "../assets/mourya_qrcode.jpeg";
+import mourya_qrcode from "../assets/mourya_qrcode.jpeg"
 
 const API = "https://rpmourya-printbee.onrender.com/order";
 
@@ -15,15 +15,14 @@ export default function OrderForm() {
     price: "",
     fileLink: "",
   });
-  const [files, setFiles] = useState([]);
+  const [file, setFile] = useState(null);
   const [status, setStatus] = useState({ loading: false, msg: "" });
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
   const onFile = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    setFiles(selectedFiles);
-    if (selectedFiles.length > 0) setForm({ ...form, fileLink: "" });
+    const f = e.target.files[0];
+    setFile(f);
+    if (f) setForm({ ...form, fileLink: "" });
   };
 
   function toBase64(file) {
@@ -64,8 +63,16 @@ export default function OrderForm() {
       return;
     }
 
-    if (files.length === 0 && !form.fileLink) {
+    if (!file && !form.fileLink) {
       setStatus({ loading: false, msg: "Attach file or provide link." });
+      return;
+    }
+
+    if (file && file.size > 100 * 1024 * 1024) {
+      setStatus({
+        loading: false,
+        msg: "File >100MB: please provide external link.",
+      });
       return;
     }
 
@@ -81,27 +88,11 @@ export default function OrderForm() {
         price: form.price || "",
       };
 
-      if (files.length > 0) {
-        // Check if any file >100MB
-        const tooLarge = files.some(f => f.size > 100 * 1024 * 1024);
-        if (tooLarge) {
-          setStatus({
-            loading: false,
-            msg: "One or more files >100MB: please provide external link.",
-          });
-          return;
-        }
-
-        payload.files = await Promise.all(
-          files.map(async (f) => {
-            const base64 = await toBase64(f);
-            return {
-              fileName: f.name,
-              fileMimeType: f.type,
-              fileBase64: base64,
-            };
-          })
-        );
+      if (file) {
+        const base64 = await toBase64(file);
+        payload.fileBase64 = base64;
+        payload.fileName = file.name;
+        payload.fileMimeType = file.type;
       } else {
         payload.fileLink = form.fileLink;
       }
@@ -135,7 +126,7 @@ export default function OrderForm() {
           price: "",
           fileLink: "",
         });
-        setFiles([]);
+        setFile(null);
       } else
         setStatus({
           loading: false,
@@ -152,10 +143,10 @@ export default function OrderForm() {
 
   const payments = {
     Cash: { type: "cash", label: "Pay with cash upon pickup" },
-    UPI: { type: "upi", value: "rpdigipress2020@indianbk", label: "Pay via UPI ID" },
+    UPI: { type: "upi", value: "9490054499@ybl", label: "Pay via UPI ID" },
     "QR Code": {
       type: "qr",
-      qrUrl: mourya,
+      qrUrl: mourya_qrcode,
       label: "Scan this QR to pay",
     },
   };
@@ -213,37 +204,14 @@ export default function OrderForm() {
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
           <label className="block w-full md:w-auto">
             <div className="text-sm font-medium text-gray-600 mb-1">
-              Attach Files (≤100MB each)
+              Attach File (≤100MB)
             </div>
             <input
               type="file"
               onChange={onFile}
               className="block w-full text-sm text-gray-600 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
-              accept=".cdr,.pdf,.psd,.ai,.eps,.svg,.tif,.tiff,.jpg,.jpeg,.png"
-              multiple
             />
           </label>
-
-          {/* Show selected files with remove button */}
-          {files.length > 0 && (
-            <ul className="text-sm text-gray-700 mt-2 md:mt-0 list-disc list-inside">
-              {files.map((f, idx) => (
-                <li key={idx} className="flex items-center justify-between gap-2">
-                  <span>{f.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFiles(files.filter((_, i) => i !== idx));
-                    }}
-                    className="text-red-500 hover:text-red-700 text-xs px-1"
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
           <span className="text-sm text-gray-400 mt-2 md:mt-0">
             OR paste external link
           </span>
@@ -255,7 +223,6 @@ export default function OrderForm() {
             className={`${inputClass} flex-1`}
           />
         </div>
-
 
         {/* Payment */}
         <div className="flex flex-col md:flex-row gap-4 items-center">
