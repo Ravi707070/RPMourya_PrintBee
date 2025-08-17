@@ -209,6 +209,8 @@ export default function OrderForm() {
             <input
               type="file"
               onChange={onFile}
+              multiple
+              accept=".cdr,.ai,.psd,.indd,.xd,.fig,.sketch,.pdf,.eps,.svg,.jpg,.jpeg,.png,.tiff,.webp"
               className="block w-full text-sm text-gray-600 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
             />
           </label>
