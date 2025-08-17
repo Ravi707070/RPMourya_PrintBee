@@ -168,15 +168,35 @@ app.get("/data", (req, res) => {
 });
 
 /* =======================
-   Continuous Render Task
+   Render Status Endpoint
+======================= */
+app.get("/render-status", (req, res) => {
+  const now = new Date();
+  const hour = now.getHours();
+  const minutes = now.getMinutes();
+
+  if (hour >= 7 && hour < 24) {
+    const hoursLeft = 23 - hour;
+    const minutesLeft = 59 - minutes;
+    res.json({
+      running: true,
+      message: `Render is active. Time left until 12 AM: ${hoursLeft}h ${minutesLeft}m`,
+    });
+  } else {
+    res.json({ running: false, message: "Render is currently inactive. Next start: 7 AM" });
+  }
+});
+
+/* =======================
+   Continuous Memory-Safe Render Task
    Runs 7 AM - 12 AM (midnight)
 ======================= */
 async function renderTask() {
   try {
-    // Replace this with your actual render logic
     const res = await fetch(`${GAS_URL}?action=renderTask`);
     const data = await res.json();
-    console.log("Render task executed at", new Date(), data);
+    console.log("Render task executed at", new Date());
+    // Do not store `data` globally to keep memory usage low
   } catch (err) {
     console.error("Render task error:", err);
   }
@@ -189,7 +209,7 @@ function startRenderLoop() {
 
     if (hour >= 7 && hour < 24) { // 7 AM to 12 AM
       await renderTask();
-      setImmediate(loop); // Run immediately again
+      setTimeout(loop, 500); // memory-safe delay
     } else {
       console.log("Outside render hours. Waiting until 7 AM...");
       const nextStart = new Date();
@@ -204,6 +224,14 @@ function startRenderLoop() {
 }
 
 startRenderLoop();
+
+/* =======================
+   Optional Memory Logger
+======================= */
+setInterval(() => {
+  const used = process.memoryUsage().heapUsed / 1024 / 1024;
+  console.log(`Memory usage: ${used.toFixed(2)} MB`);
+}, 60000); // logs every 1 min
 
 /* =======================
    Start Server
